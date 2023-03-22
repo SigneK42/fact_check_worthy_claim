@@ -20,7 +20,9 @@ from sklearn.metrics import f1_score
 
 
 def data_loading():
-    df_crowdsourced = pd.read_csv(r"data\crowdsourced.csv")
+    df_crowdsourced = pd.read_csv(
+        r"data\crowdsourced.csv"
+    )  # should update this to read it directly from online source
     df_ground_truth = pd.read_csv(r"data\groundtruth.csv")
     df = df_crowdsourced.append(df_ground_truth)  # should replace this with  pd.concat
 
@@ -127,10 +129,9 @@ def predict_it(
 ### Scoring predictions
 ###############################################
 
+
 def score_it(test_true, test_pred, train_true, train_pred):
-    
+
     # calculate all the different scores for each class and return as a dataframe?
-
-    
-
+    scores = pd.DataFrame()
     return scores

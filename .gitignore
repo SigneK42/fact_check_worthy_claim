@@ -1,0 +1,3 @@
+
+*.csv
+src/__pycache__/fact_classification.cpython-39.pyc
