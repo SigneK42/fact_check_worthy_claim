@@ -1,5 +1,6 @@
 import pandas as pd
 import string
+import numpy as np
 
 import nltk
 from nltk import ngrams
@@ -14,7 +15,7 @@ from nltk.stem.porter import PorterStemmer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import LabelEncoder
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import f1_score
+from sklearn.metrics import precision_recall_fscore_support
 
 #######################################################################
 
@@ -93,7 +94,7 @@ def stem(df):
 
 def tfid(test, train, n_gram_range=1):
     vectorizer = TfidfVectorizer(
-        TfidfVectorizer, ngram_range=(n_gram_range, n_gram_range)
+    ngram_range=(n_gram_range, n_gram_range)
     )
     train_vectorized = vectorizer.fit_transform(train)
     test_vectorized = vectorizer.transform(
@@ -103,8 +104,8 @@ def tfid(test, train, n_gram_range=1):
     return train_vectorized, test_vectorized
 
 
-########################################################
-### Predicting
+##########################################
+### Predicting ###########################
 ##########################################
 
 
@@ -124,14 +125,48 @@ def predict_it(
 
     return classifier.predict(train_feature), classifier.predict(test_feature)
 
+def stupid_model(n_predictions = 2):
+    return np.full(n_predictions,-1)
+
 
 ############################################
-### Scoring predictions
-###############################################
+### Scoring predictions ####################
+############################################
 
 
-def score_it(test_true, test_pred, train_true, train_pred):
+def score_it(test_true, test_pred, train_true, train_pred, features = 'tfid', algorithm = 'RandomForrestClassifier'):
 
     # calculate all the different scores for each class and return as a dataframe?
-    scores = pd.DataFrame()
+    scores = pd.DataFrame(columns = ['alogrithm', 'features'], data = [[algorithm, features]])
+    p, r, fs, s = precision_recall_fscore_support(test_true, test_pred, average = None, labels = [-1,0,1])
+    pw, rw, fsw, sw = precision_recall_fscore_support(test_true, test_pred, average = 'weighted')
+
+    # presicion NFS (non-factual sentence)
+    scores['p_NFS'] = p[0]
+    # presicion UFS (unimportant factual sentence)
+    scores['p_UFS'] = p[1]
+    # presicion CFS (check-worthy factual sentence)
+    scores['p_CFS'] = p[2]
+    # precision weighted average
+    scores['p_wavg'] = pw
+
+    # recall NFS (non-factual sentence)
+    scores['r_NFS'] = r[0]
+    # recall UFS (unimportant factual sentence)
+    scores['r_UFS'] = r[1]
+    # recall CFS (check-worthy factual sentence)
+    scores['r_CFS'] = r[2]
+    # precision weighted average
+    scores['r_wavg'] = rw
+
+    # fscore NFS (non-factual sentence)
+    scores['f_NFS'] = fs[0]
+    # fscore UFS (unimportant factual sentence)
+    scores['f_UFS'] = fs[1]
+    # fscore CFS (check-worthy factual sentence)
+    scores['f_CFS'] = fs[2]
+    # precision weighted average
+    scores['f_wavg'] = fsw
+
     return scores
+
