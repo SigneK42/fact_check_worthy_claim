@@ -22,9 +22,9 @@ from sklearn.metrics import precision_recall_fscore_support
 
 def data_loading():
     df_crowdsourced = pd.read_csv(
-        r"data\crowdsourced.csv"
+        r"https://zenodo.org/record/3609356/files/crowdsourced.csv?download=1"
     )  # should update this to read it directly from online source
-    df_ground_truth = pd.read_csv(r"data\groundtruth.csv")
+    df_ground_truth = pd.read_csv(r"https://zenodo.org/record/3609356/files/groundtruth.csv?download=1")
     df = df_crowdsourced.append(df_ground_truth)  # should replace this with  pd.concat
 
     return df, df_crowdsourced, df_ground_truth
@@ -113,9 +113,7 @@ def predict_it(
     train_feature,
     train_val,
     test_feature,
-    method=RandomForestClassifier(
-        n_estimators=20,
-        max_depth=20,
+    method=RandomForestClassifier(max_depth = 20,
         random_state=42,
         class_weight="balanced_subsample",
     ),
