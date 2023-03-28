@@ -22,9 +22,9 @@ from sklearn.metrics import precision_recall_fscore_support
 
 def data_loading():
     df_crowdsourced = pd.read_csv(
-        r"data\crowdsourced.csv"
+        r"https://zenodo.org/record/3609356/files/crowdsourced.csv?download=1"
     )  # should update this to read it directly from online source
-    df_ground_truth = pd.read_csv(r"data\groundtruth.csv")
+    df_ground_truth = pd.read_csv(r"https://zenodo.org/record/3609356/files/groundtruth.csv?download=1")
     df = df_crowdsourced.append(df_ground_truth)  # should replace this with  pd.concat
 
     return df, df_crowdsourced, df_ground_truth
@@ -100,8 +100,9 @@ def tfid(test, train, n_gram_range=1):
     test_vectorized = vectorizer.transform(
         test
     )  # only using transform on test (not re-fitting)
+    vocabulary = vectorizer.get_feature_names_out()
 
-    return train_vectorized, test_vectorized
+    return train_vectorized, test_vectorized, vocabulary
 
 
 ##########################################
@@ -113,9 +114,7 @@ def predict_it(
     train_feature,
     train_val,
     test_feature,
-    method=RandomForestClassifier(
-        n_estimators=20,
-        max_depth=20,
+    method=RandomForestClassifier(max_depth = 20,
         random_state=42,
         class_weight="balanced_subsample",
     ),
@@ -134,7 +133,7 @@ def stupid_model(n_predictions = 2):
 ############################################
 
 
-def score_it(test_true, test_pred, train_true, train_pred, features = 'tfid', algorithm = 'RandomForrestClassifier'):
+def score_it(test_true, test_pred, features = 'tfid', algorithm = 'RandomForrestClassifier'):
 
     # calculate all the different scores for each class and return as a dataframe?
     scores = pd.DataFrame(columns = ['alogrithm', 'features'], data = [[algorithm, features]])
