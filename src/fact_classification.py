@@ -117,8 +117,8 @@ def predict_it(
     method=RandomForestClassifier(max_depth = 20,
         random_state=42,
         class_weight="balanced_subsample",
-    ),
-):
+        ),
+    ):
     classifier = method
     classifier.fit(train_feature, train_val)
 
@@ -133,7 +133,7 @@ def stupid_model(n_predictions = 2):
 ############################################
 
 
-def score_it(test_true, test_pred, features = 'tfid', algorithm = 'RandomForrestClassifier'):
+def score_it(test_true, test_pred, features = 'tfid', algorithm = 'RandomForrest'):
 
     # calculate all the different scores for each class and return as a dataframe?
     scores = pd.DataFrame(columns = ['alogrithm', 'features'], data = [[algorithm, features]])
