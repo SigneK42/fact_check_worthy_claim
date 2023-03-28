@@ -100,8 +100,9 @@ def tfid(test, train, n_gram_range=1):
     test_vectorized = vectorizer.transform(
         test
     )  # only using transform on test (not re-fitting)
+    vocabulary = vectorizer.get_feature_names_out()
 
-    return train_vectorized, test_vectorized
+    return train_vectorized, test_vectorized, vocabulary
 
 
 ##########################################
@@ -132,7 +133,7 @@ def stupid_model(n_predictions = 2):
 ############################################
 
 
-def score_it(test_true, test_pred, train_true, train_pred, features = 'tfid', algorithm = 'RandomForrestClassifier'):
+def score_it(test_true, test_pred, features = 'tfid', algorithm = 'RandomForrestClassifier'):
 
     # calculate all the different scores for each class and return as a dataframe?
     scores = pd.DataFrame(columns = ['alogrithm', 'features'], data = [[algorithm, features]])
