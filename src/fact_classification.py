@@ -4,6 +4,9 @@ import numpy as np
 
 import nltk
 from nltk import ngrams
+from nltk import pos_tag
+from nltk.tokenize import word_tokenize
+nltk.download('averaged_perceptron_tagger')
 
 # Caching stopwords
 from nltk.corpus import stopwords
@@ -105,6 +108,21 @@ def tfid(test, train, n_gram_range=1):
     return train_vectorized, test_vectorized, vocabulary
 
 
+
+def tokenize(column):
+    tokens = nltk.word_tokenize(column)
+    return [w for w in tokens if w.isalpha()]
+
+def get_pos(l):
+    return str(list(zip(*l))[1])
+
+def pos_tag_(df): #this function doesn't work yet
+    df['tokenized'] = df.apply(lambda x: tokenize(x['Text']), axis=1)
+    df['pos_tag'] = df.tokenized.apply(nltk.pos_tag)
+    df.pos_tag = df.pos_tag.apply(lambda row: get_pos(row))
+    return df['pos_tag']
+
+
 ##########################################
 ### Predicting ###########################
 ##########################################
@@ -117,8 +135,8 @@ def predict_it(
     method=RandomForestClassifier(max_depth = 20,
         random_state=42,
         class_weight="balanced_subsample",
-    ),
-):
+        ),
+    ):
     classifier = method
     classifier.fit(train_feature, train_val)
 
@@ -133,7 +151,7 @@ def stupid_model(n_predictions = 2):
 ############################################
 
 
-def score_it(test_true, test_pred, features = 'tfid', algorithm = 'RandomForrestClassifier'):
+def score_it(test_true, test_pred, features = 'tfid', algorithm = 'RandomForrest'):
 
     # calculate all the different scores for each class and return as a dataframe?
     scores = pd.DataFrame(columns = ['alogrithm', 'features'], data = [[algorithm, features]])
