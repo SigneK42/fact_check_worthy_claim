@@ -116,7 +116,7 @@ def tokenize(column):
 def get_pos(l):
     return str(list(zip(*l))[1])
 
-def pos_tag_(df): #this function doesn't work yet
+def pos_tag_(df):
     df['tokenized'] = df.apply(lambda x: tokenize(x['Text']), axis=1)
     df['pos_tag'] = df.tokenized.apply(nltk.pos_tag)
     df.pos_tag = df.pos_tag.apply(lambda row: get_pos(row))
@@ -132,7 +132,7 @@ def predict_it(
     train_feature,
     train_val,
     test_feature,
-    method=RandomForestClassifier(max_depth = 20,
+    method=RandomForestClassifier(
         random_state=42,
         class_weight="balanced_subsample",
         ),
@@ -159,31 +159,31 @@ def score_it(test_true, test_pred, features = 'tfid', algorithm = 'RandomForrest
     pw, rw, fsw, sw = precision_recall_fscore_support(test_true, test_pred, average = 'weighted')
 
     # presicion NFS (non-factual sentence)
-    scores['p_NFS'] = p[0]
+    scores['p_NFS'] = p[0].round(2)
     # presicion UFS (unimportant factual sentence)
-    scores['p_UFS'] = p[1]
+    scores['p_UFS'] = p[1].round(2)
     # presicion CFS (check-worthy factual sentence)
-    scores['p_CFS'] = p[2]
+    scores['p_CFS'] = p[2].round(2)
     # precision weighted average
-    scores['p_wavg'] = pw
+    scores['p_wavg'] = pw.round(2)
 
     # recall NFS (non-factual sentence)
-    scores['r_NFS'] = r[0]
+    scores['r_NFS'] = r[0].round(2)
     # recall UFS (unimportant factual sentence)
-    scores['r_UFS'] = r[1]
+    scores['r_UFS'] = r[1].round(2)
     # recall CFS (check-worthy factual sentence)
-    scores['r_CFS'] = r[2]
+    scores['r_CFS'] = r[2].round(2)
     # precision weighted average
-    scores['r_wavg'] = rw
+    scores['r_wavg'] = rw.round(2)
 
     # fscore NFS (non-factual sentence)
-    scores['f_NFS'] = fs[0]
+    scores['f_NFS'] = fs[0].round(2)
     # fscore UFS (unimportant factual sentence)
-    scores['f_UFS'] = fs[1]
+    scores['f_UFS'] = fs[1].round(2)
     # fscore CFS (check-worthy factual sentence)
-    scores['f_CFS'] = fs[2]
+    scores['f_CFS'] = fs[2].round(2)
     # precision weighted average
-    scores['f_wavg'] = fsw
+    scores['f_wavg'] = fsw.round(2)
 
     return scores
 
