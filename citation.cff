@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use this code, please cite it as below."
+authors:
+- family-names: "Kristoffersen"
+  given-names: "Signe"
+- family-names: "Stava"
+  given-names: "Tor Olav"
+title: "fact_check_worthy_claim"
+version: 1.0.0
+doi: 10.5281/zenodo.1234
+date-released: 2023-04-03
+url: "https://github.com/SigneK42/fact_check_worthy_claim"
