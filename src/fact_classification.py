@@ -2,16 +2,18 @@ from sklearn.metrics import precision_recall_fscore_support
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import LabelEncoder
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.model_selection import GridSearchCV
 import spacy
 from nltk.stem.porter import PorterStemmer
 from nltk.corpus import stopwords
 import pandas as pd
 import string
 import numpy as np
+from itertools import permutations, combinations, product
 
 import nltk
 from nltk import ngrams
-from nltk import pos_tag
+from nltk import pos_tag, pos_tag_sents
 from nltk.tokenize import word_tokenize
 nltk.download('averaged_perceptron_tagger', quiet=True)
 
@@ -53,7 +55,7 @@ def data_loading(local=False):
     return df, df_crowdsourced, df_ground_truth
 
 
-def score_loading():
+def score_loading(fname='score'):
     """Load the score dataframes from csv files.
 
     Returns
@@ -61,14 +63,14 @@ def score_loading():
     Two Pandas.DataFrames; score_train, score_test
         The dataframes with the scoring data for the train and test datasets.
     """
-    score_train = pd.read_csv("../results/score_train.csv", index_col=0)
-    score_test = pd.read_csv("../results/score_test.csv", index_col=0)
+    score_train = pd.read_csv(f"../results/{fname}_train.csv", index_col=0)
+    score_test = pd.read_csv(f"../results/{fname}_test.csv", index_col=0)
     return score_train, score_test
 
 
-def score_saving(score_train, score_test):
-    score_train.to_csv("../results/score_train.csv")
-    score_test.to_csv("../results/score_test.csv")
+def score_saving(score_train, score_test, fname='score'):
+    score_train.to_csv(f"../results/{fname}_train.csv")
+    score_test.to_csv(f"../results/{fname}_test.csv")
     return
 
 
@@ -116,7 +118,7 @@ def label_to_int(df):
     return df
 
 
-def clean_text(df):
+def clean_text(df, column='Text'):
     """Clean text.
 
     Convert text to lowercase, 
@@ -133,7 +135,7 @@ def clean_text(df):
         Dataframe with the cleaned text in 'cleaned_text' column.
     """
     # convert all to lower case
-    df["cleaned_text"] = df["Text"].str.lower()
+    df["cleaned_text"] = df[column].str.lower()
     # remove the stop words
     df["cleaned_text"] = df["cleaned_text"].apply(
         lambda x: " ".join(
@@ -195,7 +197,7 @@ def to_latex(df):
 ###################################################################
 
 
-def stem(df):
+def stem(df, column='Text'):
     """Perform word stemming on the dataframe.
 
     Parameters
@@ -211,13 +213,13 @@ def stem(df):
     # Create instance of stemmer
     stemmer = PorterStemmer()
     return (
-        df["cleaned_text"].str.split(" ")
+        df[column].str.split(" ")
         .apply(lambda x: [stemmer.stem(y) for y in x])
         .apply(lambda x: ' '.join(x))
     )
 
 
-def tfid(train, test=None, n_gram_range=1):
+def tfid(train, test=None, n_gram_range=1, max_features=None):
     """Generate TF-IDF tokens.
 
     Generates TF-IDF tokens based on the text in the passed dataframe.
@@ -225,7 +227,7 @@ def tfid(train, test=None, n_gram_range=1):
     then the tokens will be trained on the train dataset, 
     and the test dataset tokens will be generated from the trained 
     model without refitting to the test dataset.
-    
+
     Parameters
     ----------
     train : Pandas.DataFrame
@@ -239,11 +241,12 @@ def tfid(train, test=None, n_gram_range=1):
     -------
     Two (optional Three) Pandas.DataFrames
         Returns the same number of dataframes as passed.
-        The dataframes contains the vecotrised TF-IDF values.
+        The dataframes contains the vectorised TF-IDF values.
         In addition the generated vocabulary is returned.
     """
     vectorizer = TfidfVectorizer(
-        ngram_range=(n_gram_range, n_gram_range)
+        ngram_range=(n_gram_range, n_gram_range),
+        max_features=max_features
     )
     train_vectorized = vectorizer.fit_transform(train)
     vocabulary = vectorizer.get_feature_names_out()
@@ -278,33 +281,33 @@ def _get_pos(l):
     return pos_list
 
 
-def pos_tag(df):
+def get_pos_tags(column):
     """Generate POS-tags.
 
     Parameters
     ----------
-    df : Pandas.DataFrame
-        Dataframe with text to use for POS-tagging.
+    column : Pandas.Series
+        Text to use for POS-tagging.
 
     Returns
     -------
-    Pandas.DataFrame
-        Dataframe with the generated POS-tags.
+    Pandas.Series
+        The generated POS-tags.
     """
-    df['tokenized'] = df.apply(lambda x: tokenize(x['Text']), axis=1)
-    df['pos_tag'] = df['tokenized'].apply(nltk.pos_tag)
-    df['pos_tag'] = df['pos_tag'].apply(lambda row: _get_pos(row))
-    df['pos_tag'] = df['pos_tag'].apply(lambda x: ' '.join(x))
-    return df['pos_tag']
+    tokens = column.apply(lambda x: tokenize(x))
+    pos_tags = tokens.apply(nltk.pos_tag)
+    pos_tags = pos_tags.apply(lambda row: _get_pos(row))
+    pos_tags = pos_tags.apply(lambda x: ' '.join(x))
+    return pos_tags
 
 
-def ner_labels(df, batch_size=1000):
+def ner_labels(column, batch_size=1000):
     """Generate NER-labels.
 
     Parameters
     ----------
-    df : Pandas.DataFrame
-        Dataframe with the text to use for NER-label generation.
+    column : Pandas.Series
+        The text to use for NER-label generation.
     batch_size : int, optional
         Batch size for the Spacy.pipe, by default 1000
 
@@ -317,7 +320,7 @@ def ner_labels(df, batch_size=1000):
     """
     nlp = spacy.load("en_core_web_sm")
     entities_list = []
-    for doc in nlp.pipe(df['Text'], batch_size=batch_size):
+    for doc in nlp.pipe(column, batch_size=batch_size):
         entities = ' '.join([ent.label_ for ent in doc.ents])
         entities_list.append(entities)
     return entities_list
@@ -433,3 +436,4 @@ def score_it(test_true, test_pred, features='W', algorithm='RFC'):
     scores['f_wavg'] = fsw.round(3)
 
     return scores
+
