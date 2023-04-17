@@ -437,3 +437,30 @@ def score_it(test_true, test_pred, features='W', algorithm='RFC'):
 
     return scores
 
+
+############################################
+### Running Experiments ####################
+############################################
+
+def run_experiment(clf, X_train, y_train, X_test, y_test, annotations):
+
+    algorithm = annotations['algorithm']
+    features = annotations['features']
+
+    print(f'Running experiment with algorithm "{algorithm}" and features "{features}"')
+    
+    # Fit model
+    clf.fit(X_train, y_train)
+    
+    # Print best parameters
+    print(f'Best parameters found: {clf.best_params_}')
+    
+    # Generate predictions
+    pred_train = clf.predict(X_train)
+    pred_test = clf.predict(X_test)
+    
+    # Get metrics
+    train_score = score_it(y_train, pred_train, algorithm=algorithm, features=features)
+    test_score = score_it(y_test, pred_test, algorithm=algorithm, features=features)
+
+    return clf, train_score, test_score
