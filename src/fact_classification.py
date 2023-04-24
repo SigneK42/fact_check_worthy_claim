@@ -7,6 +7,8 @@ import spacy
 from nltk.stem.porter import PorterStemmer
 from nltk.corpus import stopwords
 import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
 import string
 import numpy as np
 from itertools import permutations, combinations, product
@@ -443,24 +445,140 @@ def score_it(test_true, test_pred, features='W', algorithm='RFC'):
 ############################################
 
 def run_experiment(clf, X_train, y_train, X_test, y_test, annotations):
+    """_summary_
 
+    Parameters
+    ----------
+    clf : _type_
+        _description_
+    X_train : _type_
+        _description_
+    y_train : _type_
+        _description_
+    X_test : _type_
+        _description_
+    y_test : _type_
+        _description_
+    annotations : _type_
+        _description_
+
+    Returns
+    -------
+    _type_
+        _description_
+    """
     algorithm = annotations['algorithm']
     features = annotations['features']
 
-    print(f'Running experiment with algorithm "{algorithm}" and features "{features}"')
-    
+    print(
+        f'Running experiment with algorithm "{algorithm}" and features "{features}"')
+
     # Fit model
     clf.fit(X_train, y_train)
-    
+
     # Print best parameters
     print(f'Best parameters found: {clf.best_params_}')
-    
+
     # Generate predictions
     pred_train = clf.predict(X_train)
     pred_test = clf.predict(X_test)
-    
+
     # Get metrics
-    train_score = score_it(y_train, pred_train, algorithm=algorithm, features=features)
-    test_score = score_it(y_test, pred_test, algorithm=algorithm, features=features)
+    train_score = score_it(y_train, pred_train,
+                           algorithm=algorithm, features=features)
+    test_score = score_it(
+        y_test, pred_test, algorithm=algorithm, features=features)
 
     return clf, train_score, test_score
+
+############################################
+### Plotting Functions  ####################
+############################################
+
+
+def plot_train_test_score(df_score_train, df_score_test, method='SVM', order_by='f_wavg', stage='Testing'):
+    """_summary_
+
+    Parameters
+    ----------
+    df_score_train : _type_
+        _description_
+    df_score_test : _type_
+        _description_
+    method : str, optional
+        _description_, by default 'SVM'
+    order_by : str, optional
+        _description_, by default 'f_wavg'
+    stage : str, optional
+        _description_, by default 'Testing'
+    """
+    # sort order
+    sort_order = df_score_test[df_score_test['algorithm'] == method].sort_values(
+        by=order_by)['features'].to_list()
+
+    # merge dataframes
+    df_score_train['stage'] = 'Training'
+    df_score_test['stage'] = 'Testing'
+    df_score_all = pd.concat([df_score_train, df_score_test])
+
+    # convert to long format
+    df_score_long = pd.melt(df_score_all, id_vars=[
+                            'algorithm', 'features', 'stage'])
+
+    # return pointplot
+    fig, ax = plt.subplots(figsize=(6, 4))
+    if method == 'compare':
+        sort_order = df_score_test[df_score_test['algorithm'] == 'SVM'].sort_values(
+            by=order_by)['features'].to_list()
+        ax = sns.pointplot(df_score_long.query('variable=="%s" & stage=="%s"' % (order_by, stage)),
+                           x='features', y='value', hue='algorithm', order=sort_order, ax=ax, markers='.')
+    else:
+        ax = sns.pointplot(df_score_long.query('algorithm=="%s" & variable=="%s"' % (method, order_by)),
+                           x='features', y='value', hue='stage', order=sort_order, ax=ax)
+    plt.setp(ax.lines, linewidth=1.5)
+    ax.set_xticklabels(sort_order, rotation=60, ha='right')
+    ax.set_xlabel('Features')
+    ax.set_ylabel('Weighted f1-score')
+    ax.grid()
+    ax.legend()
+    plt.show()
+
+    return
+
+
+
+def plot_train_test_time(data, method='SVM', *args, **kwargs):
+    """_summary_
+
+    Parameters
+    ----------
+    data : _type_
+        _description_
+    method : str, optional
+        _description_, by default 'SVM'
+
+    Returns
+    -------
+    _type_
+        _description_
+    """
+    # data = pd.DataFrame()
+    # for key, value in gscv.items():
+    #     data = pd.concat([
+    #         data,
+    #         pd.DataFrame(value.cv_results_['mean_fit_time'], columns=[key])
+    #     ], axis=1)
+    # mean = data.mean(axis=0).sort_values()
+    # sort_order = mean.index.tolist()
+    # data = pd.melt(data[sort_order])
+
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax = sns.lineplot(data, x='Feature', y='Mean_fit_time', ax=ax)
+    # ax.set_xticks(range(len(sort_order)))
+    # ax.set_xticklabels(sort_order, rotation=60, ha='right')
+    ax.set_xlabel('Features')
+    ax.set_ylabel('Seconds')
+    ax.grid()
+    # plt.show()
+
+    return ax
