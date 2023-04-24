@@ -56,3 +56,18 @@ Here we attempt improve on the RandomForestClassifier results by adding features
 See the `SVM.ipynb` notebook.
 Here we use the SVM model to see if we can improve the results. We use the same features as created for the RandomForestClassifier, and also try tuning parameters for improved results.
 
+## AdaBoost Classifier
+See the `AdaBoost.ipynb` notebook.
+Here we use the AdaBoost model to see if we can improve the results. We use the same features as created for the RandomForestClassifier, and also try tuning parameters for improved results.
+
+## GradientBoosting Classifier
+See the `GradientBoosting.ipynb` notebook.
+Here we use the GradientBoosting model to see if we can improve the results. We use the same features as created for the RandomForestClassifier, and also try tuning parameters for improved results.
+
+## NaiveBayes Classifier
+See the `NaiveBayes.ipynb` notebook.
+Here we use the NaiveBayes model to see if we can improve the results. We use the same features as created for the RandomForestClassifier, and also try tuning parameters for improved results.
+
+## Results
+See the `Results.ipynb` notebook.
+Here we have combined some of the results from the model-specific notebooks for comparisons.
