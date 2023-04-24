@@ -562,23 +562,41 @@ def plot_train_test_time(data, method='SVM', *args, **kwargs):
     _type_
         _description_
     """
-    # data = pd.DataFrame()
-    # for key, value in gscv.items():
-    #     data = pd.concat([
-    #         data,
-    #         pd.DataFrame(value.cv_results_['mean_fit_time'], columns=[key])
-    #     ], axis=1)
-    # mean = data.mean(axis=0).sort_values()
-    # sort_order = mean.index.tolist()
-    # data = pd.melt(data[sort_order])
+    data = get_gridsearch_values(data)
+    labels = data.index.unique()
 
     fig, ax = plt.subplots(figsize=(6, 4))
-    ax = sns.lineplot(data, x='Feature', y='Mean_fit_time', ax=ax)
-    # ax.set_xticks(range(len(sort_order)))
-    # ax.set_xticklabels(sort_order, rotation=60, ha='right')
+    ax = sns.lineplot(data, x='Features', y='Mean_fit_time', ax=ax)
+    ax.set_xticks(range(len(labels)))
+    ax.set_xticklabels(labels, rotation=60, ha='right')
     ax.set_xlabel('Features')
     ax.set_ylabel('Seconds')
     ax.grid()
-    # plt.show()
+    plt.show()
+    return
 
-    return ax
+
+def get_gridsearch_values(data):
+    """_summary_
+
+    Parameters
+    ----------
+    data : _type_
+        _description_
+
+    Returns
+    -------
+    _type_
+        _description_
+    """
+    mean_fit_times = []
+    features = []
+    for key, value in data.items():
+        fit_times = value.cv_results_['mean_fit_time']
+        for fit_time in fit_times:
+            features.append(key)
+            mean_fit_times.append(fit_time)
+    df = pd.DataFrame({'Features': features, 'Mean_fit_time': mean_fit_times})
+    df.set_index('Features', inplace=True)
+    sort_order = df.groupby('Features').mean().sort_values(by='Mean_fit_time').index.tolist()
+    return df.loc[sort_order]
