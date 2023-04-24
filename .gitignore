@@ -1,3 +1,4 @@
-
-*.csv
-src/__pycache__/fact_classification.cpython-39.pyc
+checkpoint-*
+__pycache__/
+*.bz2
+logs/
