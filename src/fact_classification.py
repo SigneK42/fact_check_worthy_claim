@@ -1,26 +1,25 @@
-from sklearn.metrics import precision_recall_fscore_support
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.preprocessing import LabelEncoder
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.model_selection import GridSearchCV
-import spacy
-from nltk.stem.porter import PorterStemmer
-from nltk.corpus import stopwords
+import matplotlib.pyplot as plt
+import nltk
+import numpy as np
 import pandas as pd
 import seaborn as sns
-import matplotlib.pyplot as plt
+import spacy
 import string
-import numpy as np
+from itertools import cycle
 from itertools import permutations, combinations, product
-
-import nltk
 from nltk import ngrams
 from nltk import pos_tag, pos_tag_sents
+from nltk.corpus import stopwords
+from nltk.stem.porter import PorterStemmer
 from nltk.tokenize import word_tokenize
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics import precision_recall_fscore_support, roc_curve, auc, RocCurveDisplay
+from sklearn.model_selection import GridSearchCV
+from sklearn.preprocessing import LabelEncoder, LabelBinarizer
+
 nltk.download('averaged_perceptron_tagger', quiet=True)
-
 # Caching stopwords
-
 nltk.download("stopwords", quiet=True)
 stop_words = set(stopwords.words("english"))
 
@@ -260,17 +259,17 @@ def tfid(train, test=None, n_gram_range=1, max_features=None):
 
 
 def tokenize(column):
-    """_summary_
+    """Tokenize words
 
     Parameters
     ----------
-    column : _type_
-        _description_
+    column : array-like
+        List or series with text
 
     Returns
     -------
-    _type_
-        _description_
+    list
+        list of tokens
     """
     tokens = nltk.word_tokenize(column)
     return [w for w in tokens if w.isalpha()]
@@ -445,27 +444,32 @@ def score_it(test_true, test_pred, features='W', algorithm='RFC'):
 ############################################
 
 def run_experiment(clf, X_train, y_train, X_test, y_test, annotations):
-    """_summary_
+    """Runs a single experiment for a classifier function.
+
+    Trains the passed classifier on the training dataset, and calculates the test score using the testing dataset. 
+    Then returns the trained classifier together with the training and testing scores.
 
     Parameters
     ----------
-    clf : _type_
-        _description_
-    X_train : _type_
-        _description_
-    y_train : _type_
-        _description_
-    X_test : _type_
-        _description_
-    y_test : _type_
-        _description_
-    annotations : _type_
-        _description_
+    clf : scikit-learn classifier
+        Classifier that implements fit() and predict() functions.
+    X_train : array-like
+        Training features in a pandas dataframe or numpy array. 
+        Format must be supported by the passed classifier.
+    y_train : array-like
+        Targets for the training dataset.
+    X_test : array-like
+        Testing features in a pandas dataframe of numpy array.
+        Format must be supported by the passed classifier.
+    y_test : array-like
+        Targets for the testing dataset.
+    annotations : dict
+        Dictionary that must contain values for the keys `algorithm` and `features`.
 
     Returns
     -------
-    _type_
-        _description_
+    clf, train_score, test_score
+        Returns the trained classifier, training score dataframe, and testing score dataframe.
     """
     algorithm = annotations['algorithm']
     features = annotations['features']
@@ -497,29 +501,30 @@ def run_experiment(clf, X_train, y_train, X_test, y_test, annotations):
 
 
 def plot_train_test_score(df_score_train, df_score_test, method='SVM', order_by='f_wavg', stage='Testing'):
-    """_summary_
+    """Plot train and test scores.
 
     Parameters
     ----------
-    df_score_train : _type_
-        _description_
-    df_score_test : _type_
-        _description_
+    df_score_train : Dataframe
+        Training results
+    df_score_test : Dataframe
+        Testing results
     method : str, optional
-        _description_, by default 'SVM'
+        Method used. Must be found in the "algorithm" column in the dataframe, by default 'SVM'
     order_by : str, optional
-        _description_, by default 'f_wavg'
+        Value to order by, by default 'f_wavg'
     stage : str, optional
-        _description_, by default 'Testing'
+        Stage to plot values from. Possible values: "Training" and "Testing", by default 'Testing'
     """
     # sort order
     sort_order = df_score_test[df_score_test['algorithm'] == method].sort_values(
         by=order_by)['features'].to_list()
 
     # merge dataframes
-    df_score_train['stage'] = 'Training'
-    df_score_test['stage'] = 'Testing'
-    df_score_all = pd.concat([df_score_train, df_score_test])
+    df_score_all = pd.concat([
+        df_score_train.assign(stage='Training'), 
+        df_score_test.assign(stage='Testing')
+        ])
 
     # convert to long format
     df_score_long = pd.melt(df_score_all, id_vars=[
@@ -547,20 +552,13 @@ def plot_train_test_score(df_score_train, df_score_test, method='SVM', order_by=
 
 
 
-def plot_train_test_time(data, method='SVM', *args, **kwargs):
-    """_summary_
+def plot_train_time(data):
+    """Plot model training times.
 
     Parameters
     ----------
-    data : _type_
-        _description_
-    method : str, optional
-        _description_, by default 'SVM'
-
-    Returns
-    -------
-    _type_
-        _description_
+    data : GridSearchCV
+        Fitted instance of the GridSearchCV class
     """
     data = get_gridsearch_values(data)
     labels = data.index.unique()
@@ -573,21 +571,20 @@ def plot_train_test_time(data, method='SVM', *args, **kwargs):
     ax.set_ylabel('Seconds')
     ax.grid()
     plt.show()
-    return
-
+    
 
 def get_gridsearch_values(data):
-    """_summary_
+    """Extract values from GridSearchCV for plotting.
 
     Parameters
     ----------
-    data : _type_
-        _description_
+    data : GridSearchCV
+        Fitted instance of the GridSearchCV class
 
     Returns
     -------
-    _type_
-        _description_
+    Dataframe
+        Dataframe with columns 'Features' and 'Mean_fit_time'
     """
     mean_fit_times = []
     features = []
@@ -600,3 +597,109 @@ def get_gridsearch_values(data):
     df.set_index('Features', inplace=True)
     sort_order = df.groupby('Features').mean().sort_values(by='Mean_fit_time').index.tolist()
     return df.loc[sort_order]
+
+
+def prep_roc_data(y_onehot_test, y_score, n_classes):
+    """Prepare data for ROC plotting function.
+    
+    Based on: https://scikit-learn.org/stable/auto_examples/model_selection/plot_roc.html
+
+    Parameters
+    ----------
+    y_onehot_test : array-like of shape (n_samples, n_classes)
+        True labels
+    y_score : array-like of shape (n_samples, n_classes)
+        Predicted probabilities
+    n_classes : int
+        Number of classes
+
+    Returns
+    -------
+    fpr, tpr, roc_auc
+        False positive rate, true positive rate, area under curve
+    """
+    # store the fpr, tpr, and roc_auc for all averaging strategies
+    fpr, tpr, roc_auc = dict(), dict(), dict()
+    # Compute micro-average ROC curve and ROC area
+    fpr["micro"], tpr["micro"], _ = roc_curve(y_onehot_test.ravel(), y_score.ravel())
+    roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
+
+
+    for i in range(n_classes):
+        fpr[i], tpr[i], _ = roc_curve(y_onehot_test[:, i], y_score[:, i])
+        roc_auc[i] = auc(fpr[i], tpr[i])
+
+    fpr_grid = np.linspace(0.0, 1.0, 1000)
+
+    # Interpolate all ROC curves at these points
+    mean_tpr = np.zeros_like(fpr_grid)
+
+    for i in range(n_classes):
+        mean_tpr += np.interp(fpr_grid, fpr[i], tpr[i])  # linear interpolation
+
+    # Average it and compute AUC
+    mean_tpr /= n_classes
+
+    fpr["macro"] = fpr_grid
+    tpr["macro"] = mean_tpr
+    roc_auc["macro"] = auc(fpr["macro"], tpr["macro"])
+    
+    return fpr, tpr, roc_auc
+
+
+def plot_roc_curve(y_true, y_score, target_names = ['NFS', 'UFS', 'CFS']):
+    """Plot ROC curve.
+    
+    Based on: https://scikit-learn.org/stable/auto_examples/model_selection/plot_roc.html
+    
+    Parameters
+    ----------
+    y_true : array-like of shape (n_samples,)
+        True labels
+    y_score : array-like of shape (n_samples, n_classes)
+        Predicted probabilities. E.g. output from predict_proba() classifier function.
+    target_names : list, optional
+        List of class names. Must be in the same order as in `y_score`, by default ['NFS', 'UFS', 'CFS']
+    """
+
+    y_onehot_test = LabelBinarizer().fit_transform(y_true)
+    n_classes = len(target_names)
+    fpr, tpr, roc_auc = prep_roc_data(y_onehot_test, y_score, n_classes)
+
+    fig, ax = plt.subplots(figsize=(6, 6))
+
+    plt.plot(
+        fpr["micro"],
+        tpr["micro"],
+        label=f"micro-average ROC curve (AUC = {roc_auc['micro']:.2f})",
+        color="deeppink",
+        linestyle=":",
+        linewidth=4,
+    )
+
+    plt.plot(
+        fpr["macro"],
+        tpr["macro"],
+        label=f"macro-average ROC curve (AUC = {roc_auc['macro']:.2f})",
+        color="navy",
+        linestyle=":",
+        linewidth=4,
+    )
+
+    colors = cycle(["aqua", "darkorange", "cornflowerblue"])
+    for class_id, color in zip(range(n_classes), colors):
+        RocCurveDisplay.from_predictions(
+            y_onehot_test[:, class_id],
+            y_score[:, class_id],
+            name=f"ROC curve for {target_names[class_id]}",
+            color=color,
+            ax=ax,
+        )
+
+    plt.plot([0, 1], [0, 1], "k--", label="ROC curve for chance level (AUC = 0.5)")
+    plt.axis("square")
+    plt.xlabel("False Positive Rate")
+    plt.ylabel("True Positive Rate")
+    plt.title("Extension of Receiver Operating Characteristic\nto One-vs-Rest multiclass")
+    plt.legend()
+    plt.show()
